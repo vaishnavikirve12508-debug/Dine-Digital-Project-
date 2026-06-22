@@ -1,0 +1,39 @@
+// backend/index.js
+const express = require('express');
+const mongoose = require('mongoose');
+const cron = require('node-cron');
+
+const app = express();
+app.use(express.json());
+
+// ====== MODULE IMPORTS ======
+const couponRoutes = require('./coupon');
+const ruleRoutes = require('./offerRules');
+const broadcastRoutes = require('./broadcast');
+const campaignRoutes = require('./campaignSchedule');
+const promotionRoutes = require('./promotionTriggers');
+const festivalRoutes = require('./festivalOffers');
+
+// ====== ROUTE REGISTRATION ======
+app.use('/api', couponRoutes);
+app.use('/api', ruleRoutes);
+app.use('/api', broadcastRoutes);
+app.use('/api', campaignRoutes);
+app.use('/api', promotionRoutes);
+app.use('/api', festivalRoutes);
+
+// ====== DATABASE CONNECTION ======
+mongoose.connect("mongodb://localhost:27017/dineDigital", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ DB Connection Error:", err));
+
+// ====== CAMPAIGN AUTOMATION ======
+cron.schedule('* * * * *', async () => {
+  console.log("⏰ Checking scheduled campaigns...");
+  // Here you can query active campaigns and trigger broadcasts
+  // Example: integrate with promotion triggers + broadcast
+});
+
+app.listen(5000, () => console.log("🚀 Server running on port 5000"));
