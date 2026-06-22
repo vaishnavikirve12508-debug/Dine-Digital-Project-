@@ -1,0 +1,57 @@
+// backend/campaignSchedule.js
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+const cron = require('node-cron');
+
+// ====== CAMPAIGN SCHEMA ======
+const CampaignSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  message: { type: String, required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  targetAudience: [String], // e.g. ["loyal_customers", "new_users"]
+  isActive: { type: Boolean, default: true }
+});
+
+const Campaign = mongoose.model('Campaign', CampaignSchema);
+
+// ====== CREATE CAMPAIGN ======
+router.post('/campaign', async (req, res) => {
+  try {
+    const { name, message, startDate, endDate, targetAudience } = req.body;
+    const campaign = new Campaign({ name, message, startDate, endDate, targetAudience });
+    await campaign.save();
+
+    // Schedule campaign start
+    cron.schedule('* * * * *', async () => {
+      const now = new Date();
+      if (campaign.isActive && now >= campaign.startDate && now <= campaign.endDate) {
+        console.log(`Broadcasting campaign: ${campaign.name} - ${campaign.message}`);
+        // Integrate with broadcast system here (SMS/Email/Push)
+      }
+    });
+
+    res.json({ success: true, campaign });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ====== DEACTIVATE CAMPAIGN ======
+router.post('/campaign/deactivate', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const campaign = await Campaign.findById(id);
+    if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+
+    campaign.isActive = false;
+    await campaign.save();
+
+    res.json({ success: true, message: "Campaign deactivated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
