@@ -1,0 +1,46 @@
+// backend/broadcast.js
+const express = require('express');
+const router = express.Router();
+
+// ====== BROADCAST MESSAGE ======
+router.post('/broadcast', async (req, res) => {
+  try {
+    const { message, audience, channel } = req.body;
+    // audience: array of user identifiers (emails, phone numbers, device tokens)
+    // channel: "email", "sms", "push"
+
+    if (!message || !audience || !channel) {
+      return res.status(400).json({ error: "Message, audience, and channel are required" });
+    }
+
+    // ====== EMAIL BROADCAST ======
+    if (channel === "email") {
+      // Example: integrate with SendGrid or Nodemailer
+      // sendEmail(audience, message);
+      console.log(`Email sent to ${audience.length} users`);
+    }
+
+    // ====== SMS BROADCAST ======
+    else if (channel === "sms") {
+      // Example: integrate with Twilio
+      // sendSMS(audience, message);
+      console.log(`SMS sent to ${audience.length} users`);
+    }
+
+    // ====== PUSH NOTIFICATION ======
+    else if (channel === "push") {
+      // Example: integrate with Firebase Cloud Messaging
+      // sendPushNotification(audience, message);
+      console.log(`Push notification sent to ${audience.length} users`);
+    }
+
+    res.json({
+      success: true,
+      broadcast: `Message broadcasted via ${channel} to ${audience.length} recipients`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
