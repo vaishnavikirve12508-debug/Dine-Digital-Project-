@@ -1,0 +1,71 @@
+// backend/offerRules.js
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+
+// ====== RULE SCHEMA ======
+const RuleSchema = new mongoose.Schema({
+  name: { type: String, required: true }, // e.g. "Minimum Order Value"
+  type: { type: String, required: true }, // e.g. "min_order", "first_time_user", "weekday"
+  value: { type: mongoose.Schema.Types.Mixed, required: true }, // flexible: number, string, array
+  isActive: { type: Boolean, default: true }
+});
+
+const Rule = mongoose.model('Rule', RuleSchema);
+
+// ====== CREATE RULE ======
+router.post('/rule', async (req, res) => {
+  try {
+    const { name, type, value } = req.body;
+    const rule = new Rule({ name, type, value });
+    await rule.save();
+    res.json({ success: true, rule });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ====== VALIDATE RULES AGAINST ORDER ======
+router.post('/validate-rules', async (req, res) => {
+  try {
+    const { orderAmount, isFirstTimeUser, orderDate } = req.body;
+    const rules = await Rule.find({ isActive: true });
+
+    let results = [];
+
+    rules.forEach(rule => {
+      switch (rule.type) {
+        case "min_order":
+          results.push({
+            rule: rule.name,
+            passed: orderAmount >= rule.value
+          });
+          break;
+
+        case "first_time_user":
+          results.push({
+            rule: rule.name,
+            passed: isFirstTimeUser === rule.value
+          });
+          break;
+
+        case "weekday":
+          const day = new Date(orderDate).getDay(); // 0=Sunday, 6=Saturday
+          results.push({
+            rule: rule.name,
+            passed: rule.value.includes(day)
+          });
+          break;
+
+        default:
+          results.push({ rule: rule.name, passed: false });
+      }
+    });
+
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
