@@ -1,0 +1,31 @@
+// backend/festivalOffers.js
+const express = require('express');
+const router = express.Router();
+
+// ====== FESTIVAL OFFER TEMPLATES ======
+router.post('/festival-offer', async (req, res) => {
+  try {
+    const { festivalName, discount } = req.body;
+
+    if (!festivalName || !discount) {
+      return res.status(400).json({ error: "Festival name and discount are required" });
+    }
+
+    // Generate template message
+    const templateMessage = `Celebrate ${festivalName} with ${discount}% OFF! Use code FEST${festivalName.toUpperCase()}`;
+
+    // Example: attach to campaign scheduling or broadcast system
+    const offer = {
+      festival: festivalName,
+      discount,
+      message: templateMessage,
+      code: `FEST${festivalName.toUpperCase()}`
+    };
+
+    res.json({ success: true, offer });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
