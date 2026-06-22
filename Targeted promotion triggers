@@ -1,0 +1,90 @@
+// backend/promotionTriggers.js
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+
+// ====== USER SCHEMA ======
+const UserSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  phone: String,
+  isFirstTimeUser: Boolean,
+  totalSpent: Number,
+  lastVisit: Date,
+  loyaltyTier: String // e.g. "silver", "gold", "platinum"
+});
+
+const User = mongoose.model('User', UserSchema);
+
+// ====== PROMOTION SCHEMA ======
+const PromotionSchema = new mongoose.Schema({
+  name: String,
+  message: String,
+  triggerType: String, // e.g. "first_time", "loyalty", "spending", "festival"
+  triggerValue: mongoose.Schema.Types.Mixed, // flexible: boolean, number, string
+  isActive: { type: Boolean, default: true }
+});
+
+const Promotion = mongoose.model('Promotion', PromotionSchema);
+
+// ====== CREATE PROMOTION ======
+router.post('/promotion', async (req, res) => {
+  try {
+    const { name, message, triggerType, triggerValue } = req.body;
+    const promotion = new Promotion({ name, message, triggerType, triggerValue });
+    await promotion.save();
+    res.json({ success: true, promotion });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ====== TRIGGER PROMOTIONS ======
+router.post('/trigger-promotions', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const promotions = await Promotion.find({ isActive: true });
+    let triggered = [];
+
+    promotions.forEach(promo => {
+      switch (promo.triggerType) {
+        case "first_time":
+          if (user.isFirstTimeUser === promo.triggerValue) {
+            triggered.push(promo);
+          }
+          break;
+
+        case "loyalty":
+          if (user.loyaltyTier === promo.triggerValue) {
+            triggered.push(promo);
+          }
+          break;
+
+        case "spending":
+          if (user.totalSpent >= promo.triggerValue) {
+            triggered.push(promo);
+          }
+          break;
+
+        case "festival":
+          const today = new Date().toDateString();
+          if (today === new Date(promo.triggerValue).toDateString()) {
+            triggered.push(promo);
+          }
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    res.json({ success: true, triggeredPromotions: triggered });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
